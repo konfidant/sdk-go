@@ -35,6 +35,7 @@ result, err := client.ShareText(ctx, konfidant.ShareTextRequest{
 if err != nil {
     log.Fatal(err)
 }
+
 fmt.Println("Share this link:", result.ShareURL)
 ```
 
@@ -239,6 +240,7 @@ result, err := client.ShareAndUploadFile(
     48,
     0, 0, // use defaults
 )
+
 fmt.Println("Ready to share:", result.ShareURL)
 ```
 
@@ -252,7 +254,9 @@ All API errors return `*APIError`.
 import "errors"
 
 _, err := client.ShareText(ctx, konfidant.ShareTextRequest{Text: "secret", TTLHours: 1})
+
 var apiErr *konfidant.APIError
+
 if errors.As(err, &apiErr) {
     fmt.Println(apiErr.Error())      // e.g. "konfidant: Missing or invalid Authorization header. (HTTP 401)"
     fmt.Println(apiErr.StatusCode)   // e.g. 401
