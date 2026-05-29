@@ -278,8 +278,8 @@ if errors.As(err, &apiErr) {
 ## Development
 
 ```bash
-go test ./...           # run tests
-go test -v ./...        # verbose
-go test -race ./...     # race detector
-go vet ./...            # static analysis
+go test ./...        # run tests
+go test -v ./...     # verbose
+go test -race ./...  # race detector
+go vet ./...         # static analysis
 ```
