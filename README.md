@@ -56,11 +56,11 @@ client, err := konfidant.New(konfidant.ClientOptions{
 
 ### `konfidant.New(opts)`
 
-| Field          | Type            | Required | Description                                                         |
-|----------------|-----------------|----------|---------------------------------------------------------------------|
-| `APIKey`       | `string`        | Yes      | Your Konfidant API key                                              |
-| `BaseURL`      | `string`        | No       | Override the base URL (default: `https://www.konfidant.app`)        |
-| `HTTPTimeout`  | `time.Duration` | No       | Per-request HTTP timeout (default: `30s`; set `-1` to disable)      |
+| Field          | Type            | Required | Description                                                    |
+|----------------|-----------------|----------|----------------------------------------------------------------|
+| `APIKey`       | `string`        | Yes      | Your Konfidant API key                                         |
+| `BaseURL`      | `string`        | No       | Override the base URL (default: `https://www.konfidant.app`)   |
+| `HTTPTimeout`  | `time.Duration` | No       | Per-request HTTP timeout (default: `30s`; set `-1` to disable) |
 
 Returns `(*Client, error)`. Error if `APIKey` is empty.
 
@@ -105,12 +105,12 @@ to complete the upload, then poll `GetFileStatus` for the share link.
 
 **Response: `*ShareFileResponse`**
 
-| Field             | Type                  | Description                                   |
-|-------------------|-----------------------|-----------------------------------------------|
-| `UploadURL`       | `string`              | Short-lived presigned S3 PUT URL              |
-| `FileKey`         | `string`              | Use with `GetFileStatus` and `UploadFile`     |
-| `PollURL`         | `string`              | Convenience URL for status polling            |
-| `MetadataHeaders` | `FileMetadataHeaders` | Required S3 headers — passed by `UploadFile`  |
+| Field             | Type                  | Description                                  |
+|-------------------|-----------------------|----------------------------------------------|
+| `UploadURL`       | `string`              | Short-lived presigned S3 PUT URL             |
+| `FileKey`         | `string`              | Use with `GetFileStatus` and `UploadFile`    |
+| `PollURL`         | `string`              | Convenience URL for status polling           |
+| `MetadataHeaders` | `FileMetadataHeaders` | Required S3 headers — passed by `UploadFile` |
 
 ---
 
@@ -120,12 +120,12 @@ Upload file bytes to the presigned S3 URL from `ShareFile`. Automatically attach
 
 **Options: `UploadFileOptions`**
 
-| Field         | Type               | Description                            |
-|---------------|--------------------|----------------------------------------|
-| `Reader`      | `io.Reader`        | File content                           |
-| `Size`        | `int64`            | Content-Length in bytes                |
-| `ContentType` | `string`           | MIME type (e.g. `application/pdf`)     |
-| `Presigned`   | `ShareFileResponse`| Full response from `ShareFile`         |
+| Field         | Type               | Description                        |
+|---------------|--------------------|------------------------------------|
+| `Reader`      | `io.Reader`        | File content                       |
+| `Size`        | `int64`            | Content-Length in bytes            |
+| `ContentType` | `string`           | MIME type (e.g. `application/pdf`) |
+| `Presigned`   | `ShareFileResponse`| Full response from `ShareFile`     |
 
 **Example: manual three-step flow**
 
@@ -164,21 +164,21 @@ for {
 
 Poll the encryption status of an uploaded file.
 
-| Argument  | Type     | Description                                    |
-|-----------|----------|------------------------------------------------|
-| `fileKey` | `string` | The `FileKey` from the `ShareFile` response    |
+| Argument  | Type     | Description                                 |
+|-----------|----------|---------------------------------------------|
+| `fileKey` | `string` | The `FileKey` from the `ShareFile` response |
 
 **Response: `*FileStatusResponse`**
 
-| Field          | Type     | When set              |
-|----------------|----------|-----------------------|
+| Field          | Type     | When set                                |
+|----------------|----------|-----------------------------------------|
 | `Status`       | `string` | Always (`"processing"` or `"complete"`) |
-| `Message`      | `string` | When `processing`     |
-| `FileID`       | `string` | When `complete`       |
-| `FileName`     | `string` | When `complete`       |
-| `ShareURL`     | `string` | When `complete`       |
-| `ExpiresAt`    | `string` | When `complete`       |
-| `VerifiedBurn` | `bool`   | When `complete`       |
+| `Message`      | `string` | When `processing`                       |
+| `FileID`       | `string` | When `complete`                         |
+| `FileName`     | `string` | When `complete`                         |
+| `ShareURL`     | `string` | When `complete`                         |
+| `ExpiresAt`    | `string` | When `complete`                         |
+| `VerifiedBurn` | `bool`   | When `complete`                         |
 
 ---
 
@@ -188,12 +188,12 @@ List all shares for the authenticated organization. Pass `nil` for `params` to u
 
 **Params: `*ListSharesParams`**
 
-| Field    | Type     | Description             |
-|----------|----------|-------------------------|
-| `Type`   | `string` | `"file"` or `"text"`   |
+| Field    | Type     | Description                |
+|----------|----------|----------------------------|
+| `Type`   | `string` | `"file"` or `"text"`       |
 | `Status` | `string` | `"active"` or `"accessed"` |
-| `Limit`  | `int`    | Page size (default 50)  |
-| `Offset` | `int`    | Pagination offset       |
+| `Limit`  | `int`    | Page size (default 50)     |
+| `Offset` | `int`    | Pagination offset          |
 
 **Response: `*ListSharesResponse`**
 
@@ -220,7 +220,8 @@ Convenience wrapper that calls `ShareFile` → `UploadFile` → polls `GetFileSt
 | `pollInterval` | `time.Duration` | `2s`    | How often to check status (0 = 2s)    |
 | `timeout`      | `time.Duration` | `60s`   | Max wait time for encryption (0 = 60s)|
 
-Returns `(*ShareResult, error)`. Returns an error containing `"timed out"` if encryption does not complete within `timeout`.
+Returns `(*ShareResult, error)`. Returns an error containing `"timed out"` if encryption does not complete within
+`timeout`.
 
 **Example**
 
