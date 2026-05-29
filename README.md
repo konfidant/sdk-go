@@ -1,5 +1,7 @@
 # konfidant-go
 
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/95477308ce544dcd8b3c275127fef054)](https://app.codacy.com/gh/konfidant/sdk-go/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+
 Official Go SDK for the [Konfidant](https://www.konfidant.app) API.
 
 Konfidant lets you share secrets — encrypted text and files — that self-destruct after being read.
