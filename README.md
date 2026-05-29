@@ -1,6 +1,8 @@
 # konfidant-go
 
+[![Test](https://github.com/konfidant/sdk-go/actions/workflows/test.yml/badge.svg)](https://github.com/konfidant/sdk-go/actions/workflows/test.yml)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/95477308ce544dcd8b3c275127fef054)](https://app.codacy.com/gh/konfidant/sdk-go/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+[![Codacy Badge](https://app.codacy.com/project/badge/Coverage/95477308ce544dcd8b3c275127fef054)](https://app.codacy.com/gh/konfidant/sdk-go/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
 
 Official Go SDK for the [Konfidant](https://www.konfidant.app) API.
 
