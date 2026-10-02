@@ -104,6 +104,8 @@ to complete the upload, then poll `GetFileStatus` for the share link.
 | `FileSize` | `int64`  | File size in bytes               |
 | `TTLHours` | `int`    | Time-to-live in hours            |
 
+> Maximum file size is **80 MB** (Premium and Enterprise). Larger files are rejected with a `400` error before upload.
+
 **Response: `*ShareFileResponse`**
 
 | Field             | Type                  | Description                                  |
