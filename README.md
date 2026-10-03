@@ -4,9 +4,29 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/95477308ce544dcd8b3c275127fef054)](https://app.codacy.com/gh/konfidant/sdk-go/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/95477308ce544dcd8b3c275127fef054)](https://app.codacy.com/gh/konfidant/sdk-go/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
 
-Official Go SDK for the [Konfidant](https://www.konfidant.app) API.
+Official Go SDK for the [Konfidant](https://www.konfidant.app) API (v0.1.0). Standard library only.
 
-Konfidant lets you share secrets — encrypted text and files — that self-destruct after being read.
+Konfidant lets you share secrets — text and files — through one-time links that self-destruct after being read.
+
+---
+
+## Zero-knowledge model
+
+Everything is encrypted **on your machine** before it leaves it:
+
+1. The SDK generates a fresh random 256-bit key for every share.
+2. Content, file name and MIME type are encrypted with AES-256-GCM in KNF1, Konfidant's chunked encryption
+   format (the same format the Konfidant web app uses; every chunk is authenticated, so modified, reordered or
+   truncated data is rejected).
+3. Only ciphertext is uploaded. The server returns a link carrying a single-use token:
+   `https://download.konfidant.app/#t=<token>`.
+4. The SDK appends the key **to the URL fragment**: `https://download.konfidant.app/#t=<token>&k=<key>`.
+
+Browsers never send the fragment (`#…`) to a server, so Konfidant never sees the key and cannot decrypt your data.
+It only learns the ciphertext size and when the share was created and opened.
+
+> **The share link is the secret.** Anyone holding the full link can open the share (once). Send it over a
+> channel you trust and never log it.
 
 ---
 
@@ -23,14 +43,35 @@ go get github.com/konfidant/sdk-go
 ```go
 import konfidant "github.com/konfidant/sdk-go"
 
-client, err := konfidant.New(konfidant.ClientOptions{APIKey: "your-api-key"})
+client, err := konfidant.New(konfidant.ClientOptions{APIKey: os.Getenv("KONFIDANT_API_KEY")})
 if err != nil {
     log.Fatal(err)
 }
 
-result, err := client.ShareText(ctx, konfidant.ShareTextRequest{
-    Text:     "super-secret-password",
-    TTLHours: 24,
+result, err := client.ShareText(ctx, "super-secret-password", konfidant.ShareOptions{TTLHours: 24})
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Println("Share this link:", result.ShareURL)
+```
+
+### Share a file
+
+The file is encrypted while it is streamed to storage; it is never held in memory as a whole.
+
+```go
+f, err := os.Open("report.pdf")
+if err != nil {
+    log.Fatal(err)
+}
+defer f.Close()
+info, _ := f.Stat()
+
+result, err := client.ShareFile(ctx, f, info.Size(), konfidant.FileShareOptions{
+    Filename:    "report.pdf",      // encrypted, never visible to Konfidant
+    ContentType: "application/pdf", // encrypted as well
+    TTLHours:    72,
 })
 if err != nil {
     log.Fatal(err)
@@ -39,234 +80,135 @@ if err != nil {
 fmt.Println("Share this link:", result.ShareURL)
 ```
 
----
-
-## Authentication
-
-All requests require a Bearer API key. Generate one from the Konfidant dashboard.
+### Open a share (recipient side)
 
 ```go
-client, err := konfidant.New(konfidant.ClientOptions{
-    APIKey: os.Getenv("KONFIDANT_API_KEY"),
-})
-```
+opened, err := konfidant.OpenShare(ctx, shareURL) // no API key needed
+if errors.Is(err, konfidant.ErrShareUnavailable) {
+    log.Fatal("link already used or expired")
+}
+if err != nil {
+    log.Fatal(err)
+}
 
----
-
-## API Reference
-
-### `konfidant.New(opts)`
-
-| Field          | Type            | Required | Description                                                    |
-|----------------|-----------------|----------|----------------------------------------------------------------|
-| `APIKey`       | `string`        | Yes      | Your Konfidant API key                                         |
-| `BaseURL`      | `string`        | No       | Override the base URL (default: `https://www.konfidant.app`)   |
-| `HTTPTimeout`  | `time.Duration` | No       | Per-request HTTP timeout (default: `30s`; set `-1` to disable) |
-
-Returns `(*Client, error)`. Error if `APIKey` is empty.
-
----
-
-### `client.ShareText(ctx, req)`
-
-Encrypt and share a text message.
-
-**Request: `ShareTextRequest`**
-
-| Field      | Type     | Description              |
-|------------|----------|--------------------------|
-| `Text`     | `string` | The secret text to share |
-| `TTLHours` | `int`    | Time-to-live in hours    |
-
-**Response: `*ShareTextResponse`**
-
-| Field          | Type     | Description                                 |
-|----------------|----------|---------------------------------------------|
-| `TextID`       | `string` | Unique ID of the shared text                |
-| `ShareURL`     | `string` | One-time download link to send to recipient |
-| `ExpiresAt`    | `string` | Expiry datetime                             |
-| `VerifiedBurn` | `bool`   | Whether burn-on-read is verified            |
-
----
-
-### `client.ShareFile(ctx, req)`
-
-Requests a presigned upload URL for a file. Use the returned response with `UploadFile`
-to complete the upload, then poll `GetFileStatus` for the share link.
-
-> For a one-call convenience wrapper, see `ShareAndUploadFile`.
-
-**Request: `ShareFileRequest`**
-
-| Field      | Type     | Description                      |
-|------------|----------|----------------------------------|
-| `Filename` | `string` | Original filename with extension |
-| `FileSize` | `int64`  | File size in bytes               |
-| `TTLHours` | `int`    | Time-to-live in hours            |
-
-> Maximum file size is **80 MB** (Premium and Enterprise). Larger files are rejected with a `400` error before upload.
-
-**Response: `*ShareFileResponse`**
-
-| Field             | Type                  | Description                                  |
-|-------------------|-----------------------|----------------------------------------------|
-| `UploadURL`       | `string`              | Short-lived presigned S3 PUT URL             |
-| `FileKey`         | `string`              | Use with `GetFileStatus` and `UploadFile`    |
-| `PollURL`         | `string`              | Convenience URL for status polling           |
-| `MetadataHeaders` | `FileMetadataHeaders` | Required S3 headers — passed by `UploadFile` |
-
----
-
-### `client.UploadFile(ctx, opts)`
-
-Upload file bytes to the presigned S3 URL from `ShareFile`. Automatically attaches required S3 metadata headers. Does NOT send the Konfidant Authorization header to S3.
-
-**Options: `UploadFileOptions`**
-
-| Field         | Type               | Description                        |
-|---------------|--------------------|------------------------------------|
-| `Reader`      | `io.Reader`        | File content                       |
-| `Size`        | `int64`            | Content-Length in bytes            |
-| `ContentType` | `string`           | MIME type (e.g. `application/pdf`) |
-| `Presigned`   | `ShareFileResponse`| Full response from `ShareFile`     |
-
-**Example: manual three-step flow**
-
-```go
-f, _ := os.Open("report.pdf")
-defer f.Close()
-info, _ := f.Stat()
-
-presigned, err := client.ShareFile(ctx, konfidant.ShareFileRequest{
-    Filename: "report.pdf",
-    FileSize: info.Size(),
-    TTLHours: 72,
-})
-
-err = client.UploadFile(ctx, konfidant.UploadFileOptions{
-    Reader:      f,
-    Size:        info.Size(),
-    ContentType: "application/pdf",
-    Presigned:   *presigned,
-})
-
-// Poll until complete
-for {
-    status, err := client.GetFileStatus(ctx, presigned.FileKey)
-    if status.Status == "complete" {
-        fmt.Println("Share URL:", status.ShareURL)
-        break
-    }
-    time.Sleep(2 * time.Second)
+switch opened.Kind {
+case konfidant.KindText:
+    fmt.Println(string(opened.Data))
+case konfidant.KindFile:
+    _ = os.WriteFile(filepath.Base(opened.Name), opened.Data, 0o600)
 }
 ```
 
----
-
-### `client.GetFileStatus(ctx, fileKey)`
-
-Poll the encryption status of an uploaded file.
-
-| Argument  | Type     | Description                                 |
-|-----------|----------|---------------------------------------------|
-| `fileKey` | `string` | The `FileKey` from the `ShareFile` response |
-
-**Response: `*FileStatusResponse`**
-
-| Field          | Type     | When set                                |
-|----------------|----------|-----------------------------------------|
-| `Status`       | `string` | Always (`"processing"` or `"complete"`) |
-| `Message`      | `string` | When `processing`                       |
-| `FileID`       | `string` | When `complete`                         |
-| `FileName`     | `string` | When `complete`                         |
-| `ShareURL`     | `string` | When `complete`                         |
-| `ExpiresAt`    | `string` | When `complete`                         |
-| `VerifiedBurn` | `bool`   | When `complete`                         |
+Opening a share consumes it: the ciphertext can be downloaded only once.
 
 ---
 
-### `client.ListShares(ctx, params)`
+## API reference
 
-List all shares for the authenticated organization. Pass `nil` for `params` to use defaults.
+### `konfidant.New(opts ClientOptions) (*Client, error)`
 
-**Params: `*ListSharesParams`**
+| Field         | Type            | Required | Description                                                                      |
+|---------------|-----------------|----------|----------------------------------------------------------------------------------|
+| `APIKey`      | `string`        | Yes      | Your Konfidant API key (sent as `Authorization: Bearer …` to the API only)       |
+| `BaseURL`     | `string`        | No       | API base URL (default: `https://www.konfidant.app`)                              |
+| `HTTPTimeout` | `time.Duration` | No       | Per-request timeout, also bounds a whole upload (default `120s`; `-1` disables)  |
 
-| Field    | Type     | Description                |
-|----------|----------|----------------------------|
-| `Type`   | `string` | `"file"` or `"text"`       |
-| `Status` | `string` | `"active"` or `"accessed"` |
-| `Limit`  | `int`    | Page size (default 50)     |
-| `Offset` | `int`    | Pagination offset          |
+### `client.ShareText(ctx, text, ShareOptions{TTLHours}) (*ShareResult, error)`
 
-**Response: `*ListSharesResponse`**
+Encrypts `text` locally and creates a one-time text share. There is no client-side size limit on text; your plan's
+limits are enforced by the server.
+
+| `ShareResult` field | Type        | Description                                                      |
+|---------------------|-------------|------------------------------------------------------------------|
+| `ShareURL`          | `string`    | `https://<host>/#t=<token>&k=<key>` — send this to the recipient |
+| `ID`                | `string`    | Text ID (empty if your organization does not keep share records) |
+| `ExpiresAt`         | `time.Time` | Expiry                                                           |
+
+### `client.ShareFile(ctx, r, size, FileShareOptions{Filename, ContentType, TTLHours}) (*FileShareResult, error)`
+
+Encrypts `size` bytes from `r` and shares them as a one-time file (create upload → stream ciphertext → complete).
+`r` must yield exactly `size` bytes. `Filename` may be at most 1 024 UTF-8 bytes and `ContentType` at most 255.
+
+| `FileShareResult` field | Type        | Description                                                      |
+|-------------------------|-------------|------------------------------------------------------------------|
+| `ShareURL`              | `string`    | `https://<host>/#t=<token>&k=<key>`                              |
+| `FileID`                | `string`    | File ID (empty if your organization does not keep share records) |
+| `ExpiresAt`             | `time.Time` | Expiry                                                           |
+| `VerifiedBurn`          | `bool`      | Whether verified burn-on-read is enabled                         |
+
+### Low-level file flow
+
+`ShareFile` is built from three calls you can use directly, e.g. to upload from a pre-encrypted source:
 
 ```go
-type ListSharesResponse struct {
-    Shares     []Share
-    Pagination Pagination
-}
+key := konfidant.GenerateKey()
+meta := konfidant.Metadata{Kind: konfidant.KindFile, Name: "report.pdf", MIME: "application/pdf"}
+size, err := konfidant.CiphertextSize(meta, plaintextSize)
+
+upload, err := client.CreateFileUpload(ctx, size, 72) // POST /api/v1/files
+
+pr, pw := io.Pipe()
+go func() {
+    _, err := konfidant.Encrypt(pw, key, meta, plaintext, plaintextSize)
+    pw.CloseWithError(err)
+}()
+err = client.UploadCiphertext(ctx, upload, pr) // PUT upload_url (no Authorization header)
+
+done, err := client.CompleteFileUpload(ctx, upload.FileKey) // POST /api/v1/files/{file_key}/complete
+shareURL := done.DownloadURL + "&k=" + konfidant.EncodeKey(key)
 ```
 
----
+`CompleteFileUpload` returns an error matching `konfidant.ErrUploadIncomplete` (HTTP 409) if the ciphertext has
+not been fully uploaded.
 
-### `client.ShareAndUploadFile(ctx, r, size, filename, contentType, ttlHours, pollInterval, timeout)`
+### `client.ListShares(ctx, *ListSharesParams) (*ListSharesResponse, error)`
 
-Convenience wrapper that calls `ShareFile` → `UploadFile` → polls `GetFileStatus` until complete.
+Lists your organization's shares. Pass `nil` for defaults. Filters: `Type` (`"file"`/`"text"`),
+`Status` (`"active"`/`"accessed"`), `Limit`, `Offset`. File names are not returned: Konfidant does not know them.
 
-| Argument       | Type            | Default | Description                           |
-|----------------|-----------------|---------|---------------------------------------|
-| `r`            | `io.Reader`     | —       | File content                          |
-| `size`         | `int64`         | —       | File size in bytes                    |
-| `filename`     | `string`        | —       | Filename with extension               |
-| `contentType`  | `string`        | —       | MIME type                             |
-| `ttlHours`     | `int`           | —       | Time-to-live in hours                 |
-| `pollInterval` | `time.Duration` | `2s`    | How often to check status (0 = 2s)    |
-| `timeout`      | `time.Duration` | `60s`   | Max wait time for encryption (0 = 60s)|
+### `client.OpenShare(ctx, shareURL)` / `konfidant.OpenShare(ctx, shareURL)` `(*OpenedShare, error)`
 
-Returns `(*ShareResult, error)`. Returns an error containing `"timed out"` if encryption does not complete within
-`timeout`.
+Downloads (once) and decrypts a share link. The API key is never sent. Returns `Kind`, `Name`, `MIME` and `Data`.
 
-**Example**
+### KNF1 primitives
 
-```go
-f, _ := os.Open("confidential.zip")
-defer f.Close()
-info, _ := f.Stat()
+| Function                                                           | Description                                                   |
+|--------------------------------------------------------------------|---------------------------------------------------------------|
+| `GenerateKey() []byte`                                             | Fresh random 32-byte key                                      |
+| `EncodeKey(key) string` / `DecodeKey(s) ([]byte, error)`           | Unpadded base64url (43 characters)                            |
+| `CiphertextSize(meta, contentLen) (int64, error)`                  | Exact KNF1 size for a payload                                 |
+| `Encrypt(w, key, meta, r, size) (int64, error)`                    | Streaming encryption, one chunk (1 MiB) in memory at a time  |
+| `NewDecryptReader(key, r) (*DecryptReader, error)`                 | Streaming decryption; `Metadata()` plus `io.Reader` content   |
+| `Decrypt(key, ciphertext) (*OpenedShare, error)`                   | In-memory decryption                                          |
 
-result, err := client.ShareAndUploadFile(
-    ctx,
-    f,
-    info.Size(),
-    "confidential.zip",
-    "application/zip",
-    48,
-    0, 0, // use defaults
-)
-
-fmt.Println("Ready to share:", result.ShareURL)
-```
+`DecryptReader` authenticates chunk by chunk. If `Read` returns an error other than `io.EOF`, discard everything
+read so far: the ciphertext was modified, truncated, or the key is wrong (`ErrDecrypt`).
 
 ---
 
 ## Error handling
 
-All API errors return `*APIError`.
+API errors are `*konfidant.APIError`:
 
 ```go
-import "errors"
-
-_, err := client.ShareText(ctx, konfidant.ShareTextRequest{Text: "secret", TTLHours: 1})
+_, err := client.ShareText(ctx, "secret", konfidant.ShareOptions{TTLHours: 1})
 
 var apiErr *konfidant.APIError
-
 if errors.As(err, &apiErr) {
-    fmt.Println(apiErr.Error())      // e.g. "konfidant: Missing or invalid Authorization header. (HTTP 401)"
-    fmt.Println(apiErr.StatusCode)   // e.g. 401
-    fmt.Println(string(apiErr.Body)) // raw response body
+    fmt.Println(apiErr.StatusCode) // e.g. 401
+    fmt.Println(apiErr.Code)       // "error" field of the JSON body
+    fmt.Println(apiErr.Message)    // optional "message" field
+    fmt.Println(string(apiErr.Body))
 }
 ```
 
-### Common error codes
+| Sentinel (`errors.Is`)  | Meaning                                                            |
+|-------------------------|--------------------------------------------------------------------|
+| `ErrUploadIncomplete`   | 409 from `CompleteFileUpload`: ciphertext not fully uploaded       |
+| `ErrShareUnavailable`   | 410 from `OpenShare`: link already used or expired                 |
+| `ErrDecrypt`            | Wrong key, or modified / reordered / truncated ciphertext          |
+| `ErrInvalidFormat`      | Not a KNF1 payload, or invalid metadata (e.g. file name too long)  |
+| `ErrInvalidKey`         | Key is not 32 bytes / 43 base64url characters                      |
 
 | Status | Meaning                    |
 |--------|----------------------------|
@@ -280,8 +222,7 @@ if errors.As(err, &apiErr) {
 ## Development
 
 ```bash
-go test ./...        # run tests
-go test -v ./...     # verbose
+go test ./...        # run tests (includes the KNF1 test vectors in testdata/)
 go test -race ./...  # race detector
 go vet ./...         # static analysis
 ```

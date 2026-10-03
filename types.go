@@ -1,9 +1,6 @@
 package konfidant
 
-import (
-	"io"
-	"time"
-)
+import "time"
 
 // ClientOptions configures the Konfidant client.
 type ClientOptions struct {
@@ -12,67 +9,84 @@ type ClientOptions struct {
 	// BaseURL overrides the default API base URL (optional).
 	// Default: "https://www.konfidant.app"
 	BaseURL string
-	// HTTPTimeout overrides the per-request HTTP timeout (optional).
-	// Default: 30s. Set to -1 to disable.
+	// HTTPTimeout overrides the per-request HTTP timeout, which also bounds a whole file upload (optional).
+	// Default: 120s. Set to -1 to disable.
 	HTTPTimeout time.Duration
 }
 
-// ShareTextRequest is the body for POST /api/v1/texts.
-type ShareTextRequest struct {
-	Text     string `json:"text"`
-	TTLHours int    `json:"ttl_hours"`
+// ShareOptions configures ShareText.
+type ShareOptions struct {
+	// TTLHours is the share's time-to-live in hours. Zero lets the server apply its default.
+	TTLHours int
 }
 
-// ShareTextResponse is returned by ShareText.
-type ShareTextResponse struct {
-	TextID       string `json:"text_id"`
-	ShareURL     string `json:"share_url"`
-	ExpiresAt    string `json:"expires_at"`
-	VerifiedBurn bool   `json:"verified_burn"`
+// ShareResult is returned by ShareText.
+type ShareResult struct {
+	// ShareURL is the link to send to the recipient. It carries the decryption key in its fragment, so treat it as
+	// the secret itself.
+	ShareURL string
+	// ID is the text's ID, or empty when the organization does not store share records.
+	ID        string
+	ExpiresAt time.Time
 }
 
-// ShareFileRequest is the body for POST /api/v1/files.
-type ShareFileRequest struct {
-	Filename string `json:"filename"`
-	FileSize int64  `json:"file_size"`
-	TTLHours int    `json:"ttl_hours"`
+// FileShareOptions configures ShareFile.
+type FileShareOptions struct {
+	// Filename is the original file name (at most MaxNameBytes UTF-8 bytes). It is encrypted with the content.
+	Filename string
+	// ContentType is the MIME type (at most MaxMIMEBytes UTF-8 bytes, may be empty). It is encrypted as well.
+	ContentType string
+	// TTLHours is the share's time-to-live in hours. Zero lets the server apply its default.
+	TTLHours int
 }
 
-// FileMetadataHeaders holds the S3 metadata headers required for the PUT upload.
-type FileMetadataHeaders struct {
-	UserID         string `json:"x-amz-meta-user-id"`
-	TTLHours       string `json:"x-amz-meta-ttl-hours"`
-	OrganizationID string `json:"x-amz-meta-organization-id"`
+// FileShareResult is returned by ShareFile.
+type FileShareResult struct {
+	// ShareURL is the link to send to the recipient. It carries the decryption key in its fragment, so treat it as
+	// the secret itself.
+	ShareURL string
+	// FileID is the file's ID, or empty when the organization does not store share records.
+	FileID       string
+	ExpiresAt    time.Time
+	VerifiedBurn bool
 }
 
-// ShareFileResponse is returned by ShareFile.
-type ShareFileResponse struct {
-	UploadURL       string              `json:"upload_url"`
-	FileKey         string              `json:"file_key"`
-	MetadataHeaders FileMetadataHeaders `json:"metadata_headers"`
-	PollURL         string              `json:"poll_url"`
+// FileUpload is returned by CreateFileUpload and describes where to PUT the ciphertext.
+type FileUpload struct {
+	UploadURL string `json:"upload_url"`
+	FileKey   string `json:"file_key"`
+	// UploadHeaders must be sent verbatim with the PUT request.
+	UploadHeaders map[string]string `json:"upload_headers"`
+	// UploadExpiresIn is the validity of UploadURL, in seconds.
+	UploadExpiresIn int `json:"upload_expires_in"`
+	// CiphertextSize is the size passed to CreateFileUpload; UploadCiphertext sends exactly this many bytes.
+	CiphertextSize int64 `json:"-"`
 }
 
-// FileStatusResponse is returned by GetFileStatus.
-// Check Status to distinguish "processing" from "complete".
-type FileStatusResponse struct {
-	Status string `json:"status"` // "processing" or "complete"
+// CompletedUpload is returned by CompleteFileUpload.
+type CompletedUpload struct {
+	// DownloadURL is the server-issued link carrying the single-use token ("https://<host>/#t=<token>"). Append
+	// "&k=" + EncodeKey(key) to obtain the share link.
+	DownloadURL  string    `json:"download_url"`
+	FileID       string    `json:"file_id"`
+	ExpiresAt    time.Time `json:"expires_at"`
+	VerifiedBurn bool      `json:"verified_burn"`
+}
 
-	// Set when Status == "processing"
-	Message string `json:"message,omitempty"`
-
-	// Set when Status == "complete"
-	FileID       string `json:"file_id,omitempty"`
-	FileName     string `json:"file_name,omitempty"`
-	ShareURL     string `json:"share_url,omitempty"`
-	ExpiresAt    string `json:"expires_at,omitempty"`
-	VerifiedBurn bool   `json:"verified_burn,omitempty"`
+// OpenedShare is a decrypted share, returned by OpenShare and Decrypt.
+type OpenedShare struct {
+	Kind Kind
+	// Name is the original file name (files only).
+	Name string
+	// MIME is the content type (files only, may be empty).
+	MIME string
+	// Data is the file content, or the UTF-8 text.
+	Data []byte
 }
 
 // Share represents a single share entry returned by ListShares.
 type Share struct {
 	Type          string  `json:"type"`
-	FileName      string  `json:"file_name"`
 	FileSizeBytes int64   `json:"file_size_bytes"`
 	CreatedAt     string  `json:"created_at"`
 	ExpiresAt     string  `json:"expires_at"`
@@ -100,24 +114,4 @@ type ListSharesParams struct {
 	Status string // "active" or "accessed"
 	Limit  int
 	Offset int
-}
-
-// UploadFileOptions configures a low-level UploadFile call.
-type UploadFileOptions struct {
-	// Reader supplies the file bytes. Must be fully readable (no partial reads).
-	Reader io.Reader
-	// Size is the Content-Length in bytes. Required for the S3 PUT.
-	Size int64
-	// ContentType is the MIME type (e.g. "application/pdf").
-	ContentType string
-	// Presigned is the full response from ShareFile.
-	Presigned ShareFileResponse
-}
-
-// ShareResult is returned by ShareAndUploadFile.
-type ShareResult struct {
-	ShareURL     string `json:"share_url"`
-	FileID       string `json:"file_id"`
-	ExpiresAt    string `json:"expires_at"`
-	VerifiedBurn bool   `json:"verified_burn"`
 }
