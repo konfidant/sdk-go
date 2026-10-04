@@ -4,7 +4,7 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/95477308ce544dcd8b3c275127fef054)](https://app.codacy.com/gh/konfidant/sdk-go/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/95477308ce544dcd8b3c275127fef054)](https://app.codacy.com/gh/konfidant/sdk-go/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
 
-Official Go SDK for the [Konfidant](https://www.konfidant.app) API (v0.1.0). Standard library only.
+Official Go SDK for the [Konfidant](https://www.konfidant.app) API (v1.1.0). Standard library only.
 
 Konfidant lets you share secrets — text and files — through one-time links that self-destruct after being read.
 

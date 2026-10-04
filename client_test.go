@@ -312,7 +312,7 @@ func TestNew_Options(t *testing.T) {
 			t.Fatalf("New(%+v): %v", opts, err)
 		}
 	}
-	if konfidant.Version != "0.1.0" {
+	if konfidant.Version != "1.1.0" {
 		t.Fatalf("Version = %q", konfidant.Version)
 	}
 }
