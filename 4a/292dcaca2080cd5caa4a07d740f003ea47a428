@@ -1,0 +1,19 @@
+README.md
+  s_9f0c1ddbabf4dc::t_1282ce67be5e7e 213-223
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4a292dcaca2080cd5caa4a07d740f003ea47a428",
+  "prompts": {},
+  "sessions": {
+    "s_9f0c1ddbabf4dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "52c78c41-6dcd-4df5-8fbe-7b96dfe10f82",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "msdundar <msdundars@gmail.com>"
+    }
+  }
+}
