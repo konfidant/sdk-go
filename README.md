@@ -210,12 +210,17 @@ if errors.As(err, &apiErr) {
 | `ErrInvalidFormat`      | Not a KNF1 payload, or invalid metadata (e.g. file name too long)  |
 | `ErrInvalidKey`         | Key is not 32 bytes / 43 base64url characters                      |
 
-| Status | Meaning                    |
-|--------|----------------------------|
-| `400`  | Bad request / invalid body |
-| `401`  | Missing or invalid API key |
-| `403`  | Insufficient API key scope |
-| `404`  | Resource not found         |
+| Status | Meaning                                                                                                    |
+|--------|------------------------------------------------------------------------------------------------------------|
+| `400`  | Invalid body, or a file size or TTL above your plan's limit                                               |
+| `401`  | Missing, invalid or expired API key                                                                        |
+| `403`  | Access denied: missing scope, plan without API access, key creator blocked (seat limit, paused or unpaid subscription), more keys than the plan allows, API share allowance used up (`"code": "api_quota_exceeded"` in `Body`), or monthly storage quota reached |
+| `404`  | Resource not found, or an upload that was already completed                                                |
+| `409`  | `upload_incomplete`: the ciphertext is not in storage yet; retry `CompleteFileUpload`                      |
+| `410`  | `expired` from `CompleteFileUpload` (not completed within 2 hours), or the share is gone (`OpenShare`)     |
+| `422`  | `invalid_ciphertext`: the uploaded object doesn't match the declared size or isn't KNF1; it was deleted   |
+| `429`  | Rate limit of the API key exceeded; see the `Retry-After` header                                           |
+| `502`  | Share service unavailable; retrying `CompleteFileUpload` is safe                                           |
 
 ---
 
