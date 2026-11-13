@@ -3,6 +3,7 @@
 [![Test](https://github.com/konfidant/sdk-go/actions/workflows/test.yml/badge.svg)](https://github.com/konfidant/sdk-go/actions/workflows/test.yml)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/95477308ce544dcd8b3c275127fef054)](https://app.codacy.com/gh/konfidant/sdk-go/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![Codacy Badge](https://app.codacy.com/project/badge/Coverage/95477308ce544dcd8b3c275127fef054)](https://app.codacy.com/gh/konfidant/sdk-go/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_coverage)
+[![Quality gate status](https://sonarcloud.io/api/project_badges/measure?project=konfidant_sdk-go&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=konfidant_sdk-go)
 
 Official Go SDK for the [Konfidant](https://www.konfidant.app?utm_source=github&utm_medium=gosdk&utm_campaign=github) API (v1.1.0). Standard library only.
 
