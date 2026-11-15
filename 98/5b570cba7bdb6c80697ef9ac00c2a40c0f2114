@@ -1,0 +1,25 @@
+README.md
+  s_9f0c1ddbabf4dc::t_29145b5728a1ab 169-174
+client.go
+  s_9f0c1ddbabf4dc::t_208503dfcb1ea5 300-309
+client_test.go
+  s_9f0c1ddbabf4dc::t_b35119ab37e8e2 752-795
+types.go
+  s_9f0c1ddbabf4dc::t_2268a6f656294e 118-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "985b570cba7bdb6c80697ef9ac00c2a40c0f2114",
+  "prompts": {},
+  "sessions": {
+    "s_9f0c1ddbabf4dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "52c78c41-6dcd-4df5-8fbe-7b96dfe10f82",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "msdundar <msdundars@gmail.com>"
+    }
+  }
+}
