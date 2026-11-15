@@ -1,0 +1,18 @@
+client.go
+  h_8f86904f171102 24
+README.md
+  h_8f86904f171102 8
+client_test.go
+  h_8f86904f171102 315
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "284a613c0b28c90029a73f780517f5b5371edab2",
+  "prompts": {},
+  "humans": {
+    "h_8f86904f171102": {
+      "author": "msdundar <msdundars@gmail.com>"
+    }
+  }
+}
