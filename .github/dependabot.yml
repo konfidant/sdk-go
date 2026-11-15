@@ -4,7 +4,17 @@ updates:
     open-pull-requests-limit: 20
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      time: "08:00"
+      timezone: "Europe/Berlin"
+    commit-message:
+      prefix: "chore"
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "github-actions"
     open-pull-requests-limit: 20
     directory: "/"
