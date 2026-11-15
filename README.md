@@ -167,6 +167,12 @@ not been fully uploaded.
 Lists your organization's shares. Pass `nil` for defaults. Filters: `Type` (`"file"`/`"text"`),
 `Status` (`"active"`/`"accessed"`), `Limit`, `Offset`. File names are not returned: Konfidant does not know them.
 
+### `client.Me(ctx) (*KeyInfo, error)`
+
+Describes the API key without creating a share: `Organization` (`ID`, `Name`), `APIKey` (`Name`, `Environment`,
+`Scopes`, `RateLimitPerMinute`, `ExpiresAt`) and the plan's `Limits` (`MaxTTLHours`, `MaxFileSizeMB`). It needs no
+scope and does not count as an API share. Use it to check a key before storing it.
+
 ### `client.OpenShare(ctx, shareURL)` / `konfidant.OpenShare(ctx, shareURL)` `(*OpenedShare, error)`
 
 Downloads (once) and decrypts a share link. The API key is never sent. Returns `Kind`, `Name`, `MIME` and `Data`.

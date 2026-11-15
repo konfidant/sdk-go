@@ -297,6 +297,16 @@ func (c *Client) ListShares(ctx context.Context, params *ListSharesParams) (*Lis
 	return &resp, nil
 }
 
+// Me describes the API key: the organization it acts for, its scopes and rate limit, and the plan's share limits.
+// Use it to validate a key without creating a share. It needs no scope and does not count as an API share.
+func (c *Client) Me(ctx context.Context) (*KeyInfo, error) {
+	var info KeyInfo
+	if err := c.doJSON(ctx, http.MethodGet, "/api/v1/me", nil, &info); err != nil {
+		return nil, err
+	}
+	return &info, nil
+}
+
 // OpenShare fetches and decrypts a share link ("https://<host>/#t=<token>&k=<key>") as its recipient would. This
 // consumes the share: it can be opened only once. The API key is not sent. An error matching ErrShareUnavailable
 // means the share was already opened or has expired.

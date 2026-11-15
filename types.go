@@ -115,3 +115,31 @@ type ListSharesParams struct {
 	Limit  int
 	Offset int
 }
+
+// KeyInfo is returned by Me.
+type KeyInfo struct {
+	Organization Organization `json:"organization"`
+	APIKey       APIKeyInfo   `json:"api_key"`
+	Limits       PlanLimits   `json:"limits"`
+}
+
+// Organization is the Konfidant organization an API key acts for.
+type Organization struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// APIKeyInfo describes an API key.
+type APIKeyInfo struct {
+	Name               string   `json:"name"`
+	Environment        string   `json:"environment"` // "live" or "test"
+	Scopes             []string `json:"scopes"`
+	RateLimitPerMinute int      `json:"rate_limit_per_minute"`
+	ExpiresAt          *string  `json:"expires_at"` // nil if the key never expires
+}
+
+// PlanLimits holds the organization's plan limits for new shares.
+type PlanLimits struct {
+	MaxTTLHours   int `json:"max_ttl_hours"`
+	MaxFileSizeMB int `json:"max_file_size_mb"` // largest file before encryption, in MB
+}

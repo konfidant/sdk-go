@@ -749,3 +749,47 @@ func TestOpenShare_InvalidURLs(t *testing.T) {
 		}
 	}
 }
+
+func TestMe(t *testing.T) {
+	var gotAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/api/v1/me" {
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+		}
+		gotAuth = r.Header.Get("Authorization")
+		writeJSON(w, http.StatusOK, map[string]any{
+			"organization": map[string]any{"id": "org_1", "name": "Acme"},
+			"api_key": map[string]any{"name": "Slack", "environment": "live", "scopes": []string{"texts:create", "files:create"},
+				"rate_limit_per_minute": 60, "expires_at": nil},
+			"limits": map[string]any{"max_ttl_hours": 168, "max_file_size_mb": 100},
+		})
+	}))
+	defer srv.Close()
+	c, _ := konfidant.New(konfidant.ClientOptions{APIKey: "k", BaseURL: srv.URL})
+
+	info, err := c.Me(context.Background())
+	if err != nil {
+		t.Fatalf("Me: %v", err)
+	}
+	if gotAuth != "Bearer k" {
+		t.Fatalf("auth = %q", gotAuth)
+	}
+	if info.Organization.ID != "org_1" || info.Organization.Name != "Acme" || info.APIKey.Name != "Slack" ||
+		info.APIKey.Environment != "live" || len(info.APIKey.Scopes) != 2 || info.APIKey.RateLimitPerMinute != 60 ||
+		info.APIKey.ExpiresAt != nil || info.Limits.MaxTTLHours != 168 || info.Limits.MaxFileSizeMB != 100 {
+		t.Fatalf("info = %+v", info)
+	}
+}
+
+func TestMe_Error(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Invalid API key"})
+	}))
+	defer srv.Close()
+	c, _ := konfidant.New(konfidant.ClientOptions{APIKey: "k", BaseURL: srv.URL})
+	_, err := c.Me(context.Background())
+	var apiErr *konfidant.APIError
+	if !errors.As(err, &apiErr) || apiErr.StatusCode != 401 {
+		t.Fatalf("err = %v", err)
+	}
+}
